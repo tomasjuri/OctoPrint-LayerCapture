@@ -1,0 +1,162 @@
+<form class="form-horizontal">
+    <div class="control-group">
+        <h4>{{ _("Grid Configuration") }}</h4>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Grid Center X (mm)") }}</label>
+        <div class="controls">
+            <input type="number" step="0.1" class="input-block-level" data-bind="value: settings.plugins.layercapture.grid_center_x">
+            <span class="help-block">{{ _("X coordinate of the grid center on the print bed") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Grid Center Y (mm)") }}</label>
+        <div class="controls">
+            <input type="number" step="0.1" class="input-block-level" data-bind="value: settings.plugins.layercapture.grid_center_y">
+            <span class="help-block">{{ _("Y coordinate of the grid center on the print bed") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Grid Spacing (mm)") }}</label>
+        <div class="controls">
+            <input type="number" step="1" class="input-block-level" data-bind="value: settings.plugins.layercapture.grid_spacing">
+            <span class="help-block">{{ _("Distance between grid points in millimeters (default: 40mm = 4cm)") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Grid Size") }}</label>
+        <div class="controls">
+            <select class="input-block-level" data-bind="value: settings.plugins.layercapture.grid_size">
+                <option value="1">1x1 (1 position - center only)</option>
+                <option value="3">3x3 (9 positions)</option>
+                <option value="5">5x5 (25 positions)</option>
+            </select>
+            <span class="help-block">{{ _("Number of grid points in each direction") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <h4>{{ _("Print Bed Dimensions") }}</h4>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Bed Width (mm)") }}</label>
+        <div class="controls">
+            <input type="number" step="1" class="input-block-level" data-bind="value: settings.plugins.layercapture.bed_width">
+            <span class="help-block">{{ _("Width of your printer bed for boundary checking") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Bed Height (mm)") }}</label>
+        <div class="controls">
+            <input type="number" step="1" class="input-block-level" data-bind="value: settings.plugins.layercapture.bed_height">
+            <span class="help-block">{{ _("Height of your printer bed for boundary checking") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <h4>{{ _("Layer Capture Settings") }}</h4>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Capture Every N Layers") }}</label>
+        <div class="controls">
+            <input type="number" min="1" step="1" class="input-block-level" data-bind="value: settings.plugins.layercapture.capture_every_n_layers">
+            <span class="help-block">{{ _("Capture images every N layers (e.g., 10 = every 10th layer)") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Minimum Layer Height (mm)") }}</label>
+        <div class="controls">
+            <input type="number" step="0.01" class="input-block-level" data-bind="value: settings.plugins.layercapture.min_layer_height">
+            <span class="help-block">{{ _("Minimum layer height for layer calculation") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <h4>{{ _("Camera Settings") }}</h4>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Use Fake Camera") }}</label>
+        <div class="controls">
+            <input type="checkbox" data-bind="checked: settings.plugins.layercapture.use_fake_camera">
+            <span class="help-block">{{ _("Enable for testing without a real camera (creates dummy image files)") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Capture Delay (seconds)") }}</label>
+        <div class="controls">
+            <input type="number" min="0" step="0.5" class="input-block-level" data-bind="value: settings.plugins.layercapture.capture_delay">
+            <span class="help-block">{{ _("Wait time between movement and image capture") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Return to Origin") }}</label>
+        <div class="controls">
+            <input type="checkbox" data-bind="checked: settings.plugins.layercapture.return_to_origin">
+            <span class="help-block">{{ _("Return print head to original position after capture sequence") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <h4>{{ _("File Management") }}</h4>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Capture Folder") }}</label>
+        <div class="controls">
+            <input type="text" class="input-block-level" data-bind="value: settings.plugins.layercapture.capture_folder">
+            <span class="help-block">{{ _("Folder name within uploads directory for storing captured images") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Save Metadata") }}</label>
+        <div class="controls">
+            <input type="checkbox" data-bind="checked: settings.plugins.layercapture.save_metadata">
+            <span class="help-block">{{ _("Save JSON metadata files with capture information") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <h4>{{ _("Safety Settings") }}</h4>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Maximum Z Height (mm)") }}</label>
+        <div class="controls">
+            <input type="number" step="1" class="input-block-level" data-bind="value: settings.plugins.layercapture.max_z_height">
+            <span class="help-block">{{ _("Maximum Z height limit for safety") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Boundary Margin (mm)") }}</label>
+        <div class="controls">
+            <input type="number" step="0.5" class="input-block-level" data-bind="value: settings.plugins.layercapture.boundary_margin">
+            <span class="help-block">{{ _("Safety margin from bed edges") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <h4>{{ _("Preview") }}</h4>
+    </div>
+    
+    <div class="control-group">
+        <div class="controls">
+            <button type="button" class="btn btn-primary" data-bind="click: showGridPreview">
+                {{ _("Show Grid Preview") }}
+            </button>
+            <span class="help-block">{{ _("Preview the grid positions that will be used for capture") }}</span>
+        </div>
+    </div>
+</form> 

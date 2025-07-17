@@ -1,0 +1,46 @@
+/* Layer Capture Plugin Styles */
+
+.layercapture-grid-preview {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.layercapture-status {
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
+}
+
+.layercapture-status.active {
+    background-color: #dff0d8;
+    border: 1px solid #d6e9c6;
+    color: #3c763d;
+}
+
+.layercapture-status.inactive {
+    background-color: #f2dede;
+    border: 1px solid #ebccd1;
+    color: #a94442;
+}
+
+.layercapture-settings-section {
+    margin-bottom: 20px;
+}
+
+.layercapture-position-safe {
+    color: #5cb85c;
+}
+
+.layercapture-position-unsafe {
+    color: #d9534f;
+}
+
+.layercapture-preview-table {
+    font-size: 12px;
+}
+
+.layercapture-help-text {
+    font-style: italic;
+    color: #666;
+    font-size: 11px;
+} 

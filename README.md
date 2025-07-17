@@ -154,3 +154,187 @@ Cross-browser testing services are kindly provided by [BrowserStack](https://www
 Profiling is done with the help of [PyVmMonitor](https://www.pyvmmonitor.com).
 
 Error tracking is powered and sponsored by [Sentry](https://sentry.io).
+
+# OctoPrint Layer Capture Plugin
+
+An OctoPrint plugin that automatically captures images at specified print layers with configurable grid positions for 3D print monitoring and analysis.
+
+## Features
+
+- 🔄 **Automatic Layer Detection**: Captures images at predefined layer intervals
+- 📍 **Configurable Grid Capture**: Takes multiple images in a grid pattern around the print
+- 🎯 **Precise Positioning**: Moves print head to exact coordinates for consistent captures
+- 🖼️ **Multiple Formats**: Saves images as JPG with comprehensive JSON metadata
+- 🛡️ **Safety Features**: Boundary checking and position validation
+- 🧪 **Debug Mode**: Fake camera support for testing without hardware
+- ⚙️ **Highly Configurable**: Extensive settings for grid spacing, layer intervals, and capture behavior
+
+## Installation
+
+### Manual Installation
+
+1. Clone or download this repository to your local machine
+2. Navigate to the plugin directory:
+   ```bash
+   cd OctoPrint-LayerCapture
+   ```
+
+3. Install the plugin using pip in your OctoPrint environment:
+   ```bash
+   pip install .
+   ```
+
+4. Restart OctoPrint
+
+### Plugin Manager Installation (Future)
+
+This plugin will be available through the OctoPrint Plugin Manager in future releases.
+
+## Configuration
+
+After installation, go to **Settings > Plugins > Layer Capture** to configure:
+
+### Grid Configuration
+- **Grid Center**: X/Y coordinates of the capture grid center
+- **Grid Spacing**: Distance between capture points (default: 40mm)
+- **Grid Size**: Number of capture positions (1x1, 3x3, or 5x5)
+
+### Layer Capture Settings
+- **Capture Interval**: Capture every N layers (e.g., every 10th layer)
+- **Layer Height**: Minimum layer height for calculations
+
+### Camera Settings
+- **Fake Camera**: Enable for testing without real camera hardware
+- **Capture Delay**: Wait time between movement and capture
+- **Return to Origin**: Whether to return print head to original position
+
+### Safety Settings
+- **Bed Dimensions**: Width and height of your print bed
+- **Boundary Margin**: Safety margin from bed edges
+- **Max Z Height**: Maximum Z height limit
+
+## Usage
+
+1. **Configure the plugin** with your printer's bed dimensions and desired capture settings
+2. **Start a print** - the plugin will automatically detect when printing begins
+3. **Monitor captures** - the plugin will pause the print at specified layers, capture images, and resume automatically
+4. **Review results** - captured images and metadata are saved in the uploads/layercapture folder
+
+## File Organization
+
+Captured files are organized as follows:
+```
+uploads/
+└── layercapture/
+    ├── layer_0010_pos_00_20241201_143022.jpg
+    ├── layer_0010_pos_01_20241201_143025.jpg
+    ├── layer_0010_pos_02_20241201_143028.jpg
+    ├── layer_0010_metadata_20241201_143030.json
+    └── ...
+```
+
+## Metadata Format
+
+Each capture session generates a JSON metadata file containing:
+
+```json
+{
+  "layer": 10,
+  "z_height": 2.0,
+  "timestamp": 1701436830.123,
+  "gcode_file": "test_print.gcode",
+  "print_start_time": 1701436000.000,
+  "images": [
+    {
+      "path": "/uploads/layercapture/layer_0010_pos_00_20241201_143022.jpg",
+      "position": {"x": 100, "y": 100},
+      "index": 0
+    }
+  ],
+  "settings": {
+    "grid_spacing": 40,
+    "grid_center": {"x": 100, "y": 100},
+    "grid_size": 3
+  }
+}
+```
+
+## Development and Testing
+
+### Testing with Fake Camera
+
+Enable "Use Fake Camera" in settings to test the plugin without camera hardware. This will create placeholder text files instead of actual images.
+
+### Virtual Printer Testing
+
+1. Enable OctoPrint's Virtual Printer in Settings > Serial Connection
+2. Connect to the virtual printer
+3. Upload and print a test GCODE file
+4. Monitor the capture behavior in the logs
+
+## Troubleshooting
+
+### Common Issues
+
+**Plugin not appearing in settings:**
+- Ensure the plugin is properly installed in the correct Python environment
+- Check the OctoPrint logs for any import errors
+- Restart OctoPrint completely
+
+**Captures not triggering:**
+- Verify Z-change events are being detected
+- Check that your layer interval settings are appropriate
+- Enable debug logging to see layer detection events
+
+**Grid positions out of bounds:**
+- Use the "Show Grid Preview" button to verify positions
+- Adjust grid center or reduce grid size/spacing
+- Ensure bed dimensions are correctly configured
+
+### Debug Logging
+
+To enable debug logging for the plugin:
+
+1. Go to Settings > Logging
+2. Add a new logger: `octoprint.plugins.layercapture`
+3. Set level to `DEBUG`
+4. Monitor the logs during print capture
+
+## Safety Considerations
+
+⚠️ **Important Safety Notes:**
+
+- Always test with fake camera mode first
+- Verify grid positions are within safe bed boundaries
+- Monitor first few captures to ensure proper behavior
+- Keep print head movement speeds reasonable
+- Ensure adequate clearance for all grid positions
+
+## Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+This plugin is licensed under the AGPLv3 License. See [LICENSE](LICENSE) for details.
+
+## Support
+
+- **Issues**: Report bugs and feature requests on [GitHub Issues](https://github.com/example/OctoPrint-LayerCapture/issues)
+- **Community**: Join the discussion on the [OctoPrint Community Forum](https://community.octoprint.org)
+
+## Changelog
+
+### v0.1.0 (Initial Release)
+- Basic layer capture functionality
+- Configurable grid positioning
+- Fake camera support for testing
+- JSON metadata generation
+- Safety boundary checking
+- Settings UI with preview functionality
