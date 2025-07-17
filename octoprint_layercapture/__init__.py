@@ -54,6 +54,9 @@ class LayerCapturePlugin(
             # Camera configuration
             "use_fake_camera": True,  # For debugging without real camera
             "capture_delay": 2,  # Delay between movements and capture in seconds
+            "pre_capture_delay": 0.5,  # Additional delay before taking snapshot
+            "create_thumbnails": True,  # Create thumbnails for web viewing
+            "image_quality": 95,  # JPEG quality (1-100)
             "return_to_origin": True,  # Return to original position after capture
             
             # G-code and movement configuration
@@ -577,69 +580,261 @@ class LayerCapturePlugin(
     def _capture_image(self, capture_data, position_index):
         """Capture image at current position"""
         try:
-            # Create filename
+            # Create filename with better formatting
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"layer_{capture_data['layer']:04d}_pos_{position_index:02d}_{timestamp}.jpg"
+            layer_str = f"{capture_data['layer']:04d}"
+            pos_str = f"{position_index:02d}"
+            z_height_str = f"{capture_data['z_height']:.2f}".replace('.', '_')
             
-            # Create capture directory
+            filename = f"layer_{layer_str}_pos_{pos_str}_z_{z_height_str}_{timestamp}.jpg"
+            
+            # Create capture directory with date-based organization
             capture_folder = self._settings.get(["capture_folder"])
-            capture_dir = os.path.join(self._file_manager.get_folder_path("uploads"), capture_folder)
+            date_folder = datetime.now().strftime("%Y-%m-%d")
+            capture_dir = os.path.join(
+                self._file_manager.get_folder_path("uploads"), 
+                capture_folder, 
+                date_folder
+            )
             os.makedirs(capture_dir, exist_ok=True)
             
             image_path = os.path.join(capture_dir, filename)
             
+            # Add pre-capture delay if configured
+            pre_capture_delay = self._settings.get_float(["pre_capture_delay"])
+            if pre_capture_delay > 0:
+                self._logger.debug(f"Pre-capture delay: {pre_capture_delay}s")
+                time.sleep(pre_capture_delay)
+            
+            # Capture based on mode
+            capture_start_time = time.time()
             if self._settings.get_boolean(["use_fake_camera"]):
-                # Create fake image for testing
+                self._logger.debug(f"Using fake camera for position {position_index + 1}")
                 self._create_fake_image(image_path, capture_data, position_index)
             else:
-                # Use real camera capture
+                self._logger.debug(f"Using real camera for position {position_index + 1}")
                 self._capture_real_image(image_path)
             
-            self._logger.debug(f"Image captured: {image_path}")
-            return image_path
+            capture_duration = time.time() - capture_start_time
+            
+            # Validate image was created
+            if os.path.exists(image_path):
+                file_size = os.path.getsize(image_path)
+                self._logger.debug(f"Image captured successfully: {filename} ({file_size} bytes, {capture_duration:.2f}s)")
+                
+                # Optional: Create thumbnail for web viewing
+                if self._settings.get_boolean(["create_thumbnails"]):
+                    self._create_thumbnail(image_path)
+                
+                return image_path
+            else:
+                raise Exception("Image file was not created")
             
         except Exception as e:
-            self._logger.error(f"Failed to capture image: {e}")
+            self._logger.error(f"Failed to capture image at position {position_index}: {e}")
             return None
+    
+    def _create_thumbnail(self, image_path):
+        """Create a thumbnail for web viewing"""
+        try:
+            from PIL import Image
+            
+            thumbnail_path = image_path.replace('.jpg', '_thumb.jpg')
+            thumbnail_size = (160, 120)
+            
+            with Image.open(image_path) as image:
+                image.thumbnail(thumbnail_size, Image.Resampling.LANCZOS)
+                image.save(thumbnail_path, 'JPEG', quality=75)
+                
+            self._logger.debug(f"Created thumbnail: {thumbnail_path}")
+            
+        except ImportError:
+            self._logger.warning("PIL not available for thumbnail creation")
+        except Exception as e:
+            self._logger.warning(f"Failed to create thumbnail: {e}")
     
     def _create_fake_image(self, image_path, capture_data, position_index):
         """Create a fake image file for testing"""
-        # Create a simple text file as placeholder for now
-        # In real implementation, this could generate a test image
-        fake_data = f"FAKE IMAGE - Layer: {capture_data['layer']}, Position: {position_index}, Time: {datetime.now()}"
-        with open(image_path, 'w') as f:
-            f.write(fake_data)
+        try:
+            from PIL import Image, ImageDraw, ImageFont
+            import io
+            
+            # Create a realistic fake image using PIL
+            width, height = 640, 480
+            image = Image.new('RGB', (width, height), color='lightblue')
+            draw = ImageDraw.Draw(image)
+            
+            # Try to use a basic font, fallback to default
+            try:
+                font = ImageFont.truetype("arial.ttf", 20)
+                small_font = ImageFont.truetype("arial.ttf", 14)
+            except:
+                try:
+                    font = ImageFont.load_default()
+                    small_font = ImageFont.load_default()
+                except:
+                    font = None
+                    small_font = None
+            
+            # Draw background pattern to simulate print bed
+            for i in range(0, width, 20):
+                draw.line([(i, 0), (i, height)], fill='lightgray', width=1)
+            for i in range(0, height, 20):
+                draw.line([(0, i), (width, i)], fill='lightgray', width=1)
+            
+            # Draw a simple "print object" in the center
+            object_x, object_y = width // 2, height // 2
+            object_size = min(width, height) // 4
+            draw.ellipse([
+                object_x - object_size//2, object_y - object_size//2,
+                object_x + object_size//2, object_y + object_size//2
+            ], fill='orange', outline='darkorange', width=2)
+            
+            # Add layer visualization (stack effect)
+            layer_height = max(1, min(10, capture_data['layer'] // 5))
+            for i in range(layer_height):
+                offset = i * 2
+                draw.ellipse([
+                    object_x - object_size//2 + offset, object_y - object_size//2 + offset,
+                    object_x + object_size//2 + offset, object_y + object_size//2 + offset
+                ], outline='red', width=1)
+            
+            # Add text information
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            info_lines = [
+                f"FAKE CAMERA - LayerCapture Plugin",
+                f"Layer: {capture_data['layer']}",
+                f"Position: {position_index + 1}",
+                f"Z-Height: {capture_data['z_height']:.2f}mm",
+                f"Time: {timestamp}",
+                f"File: {os.path.basename(capture_data.get('gcode_file', 'unknown.gcode'))}"
+            ]
+            
+            y_offset = 10
+            for line in info_lines:
+                if font:
+                    draw.text((10, y_offset), line, fill='black', font=small_font)
+                    y_offset += 18
+                else:
+                    draw.text((10, y_offset), line, fill='black')
+                    y_offset += 15
+            
+            # Add crosshair to show capture position
+            cross_size = 20
+            center_x, center_y = width // 2, height // 2
+            draw.line([
+                (center_x - cross_size, center_y),
+                (center_x + cross_size, center_y)
+            ], fill='red', width=2)
+            draw.line([
+                (center_x, center_y - cross_size),
+                (center_x, center_y + cross_size)
+            ], fill='red', width=2)
+            
+            # Save as JPEG with configured quality
+            quality = self._settings.get_int(["image_quality"])
+            image.save(image_path, 'JPEG', quality=quality)
+            self._logger.debug(f"Created fake image: {image_path}")
+            
+        except ImportError:
+            # Fallback if PIL is not available - create a simple text file
+            self._logger.warning("PIL not available, creating simple text file instead of fake image")
+            fake_data = f"""FAKE IMAGE DATA - LayerCapture Plugin
+Layer: {capture_data['layer']}
+Position: {position_index + 1}
+Z-Height: {capture_data['z_height']:.2f}mm
+Time: {datetime.now()}
+File: {os.path.basename(capture_data.get('gcode_file', 'unknown.gcode'))}
+
+Note: Install PIL/Pillow for realistic fake images: pip install Pillow"""
+            
+            with open(image_path.replace('.jpg', '.txt'), 'w') as f:
+                f.write(fake_data)
+                
+        except Exception as e:
+            self._logger.error(f"Failed to create fake image: {e}")
+            # Ultra-simple fallback
+            fake_data = f"FAKE IMAGE - Layer: {capture_data['layer']}, Position: {position_index}, Time: {datetime.now()}"
+            with open(image_path.replace('.jpg', '.txt'), 'w') as f:
+                f.write(fake_data)
     
     def _capture_real_image(self, image_path):
-        """Capture real image using webcam"""
-        # This would use OctoPrint's webcam system to capture actual images
-        # For now, placeholder implementation
-        raise NotImplementedError("Real camera capture not implemented yet")
+        """Capture real image using OctoPrint's webcam system"""
+        try:
+            from octoprint.webcams import get_snapshot_webcam, WebcamNotAbleToTakeSnapshotException
+            
+            # Get the configured snapshot webcam
+            webcam = get_snapshot_webcam()
+            if not webcam:
+                raise Exception("No webcam configured for snapshots")
+            
+            if not webcam.config.canSnapshot:
+                raise WebcamNotAbleToTakeSnapshotException(webcam.config.name)
+            
+            self._logger.debug(f"Capturing image from webcam '{webcam.config.name}' using provider '{webcam.providerIdentifier}'")
+            
+            # Take snapshot using the webcam provider plugin
+            snapshot_data = webcam.providerPlugin.take_webcam_snapshot(webcam.config.name)
+            
+            # Save the snapshot data to file
+            with open(image_path, 'wb') as f:
+                for chunk in snapshot_data:
+                    if chunk:
+                        f.write(chunk)
+                        f.flush()
+            
+            self._logger.debug(f"Successfully captured real image: {image_path}")
+            return True
+            
+        except WebcamNotAbleToTakeSnapshotException as e:
+            self._logger.error(f"Webcam '{e.webcam_name}' cannot take snapshots")
+            raise Exception(f"Webcam '{e.webcam_name}' is not configured for snapshots")
+            
+        except Exception as e:
+            self._logger.error(f"Failed to capture real image: {e}")
+            raise Exception(f"Camera capture failed: {e}")
     
     def _save_capture_metadata(self, capture_data, captured_images):
         """Save JSON metadata for the capture session"""
+        # Get camera information
+        camera_info = self._get_camera_info()
+        
         metadata = {
             "layer": capture_data["layer"],
             "z_height": capture_data["z_height"],
             "timestamp": capture_data["timestamp"],
+            "timestamp_iso": datetime.fromtimestamp(capture_data["timestamp"]).isoformat(),
             "gcode_file": capture_data["gcode_file"],
             "print_start_time": self._print_start_time,
+            "print_start_time_iso": datetime.fromtimestamp(self._print_start_time).isoformat() if self._print_start_time else None,
             "images": captured_images,
+            "camera": camera_info,
             "settings": {
                 "grid_spacing": self._settings.get_float(["grid_spacing"]),
                 "grid_center": {
                     "x": self._settings.get_float(["grid_center_x"]),
                     "y": self._settings.get_float(["grid_center_y"])
                 },
-                "grid_size": self._settings.get_int(["grid_size"])
-            }
+                "grid_size": self._settings.get_int(["grid_size"]),
+                "z_offset": self._settings.get_float(["z_offset"]),
+                "image_quality": self._settings.get_int(["image_quality"]),
+                "movement_speed": self._settings.get_int(["movement_speed"]),
+                "capture_delay": self._settings.get_int(["capture_delay"]),
+                "pre_capture_delay": self._settings.get_float(["pre_capture_delay"])
+            },
+            "plugin_version": __plugin_version__
         }
         
         # Save metadata file
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         metadata_filename = f"layer_{capture_data['layer']:04d}_metadata_{timestamp}.json"
         capture_folder = self._settings.get(["capture_folder"])
-        capture_dir = os.path.join(self._file_manager.get_folder_path("uploads"), capture_folder)
+        date_folder = datetime.now().strftime("%Y-%m-%d")
+        capture_dir = os.path.join(
+            self._file_manager.get_folder_path("uploads"), 
+            capture_folder, 
+            date_folder
+        )
         metadata_path = os.path.join(capture_dir, metadata_filename)
         
         try:
@@ -648,6 +843,46 @@ class LayerCapturePlugin(
             self._logger.debug(f"Metadata saved: {metadata_path}")
         except Exception as e:
             self._logger.error(f"Failed to save metadata: {e}")
+    
+    def _get_camera_info(self):
+        """Get information about the camera being used"""
+        camera_info = {
+            "type": "fake" if self._settings.get_boolean(["use_fake_camera"]) else "real",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        if not self._settings.get_boolean(["use_fake_camera"]):
+            try:
+                from octoprint.webcams import get_snapshot_webcam
+                
+                webcam = get_snapshot_webcam()
+                if webcam:
+                    camera_info.update({
+                        "name": webcam.config.name,
+                        "display_name": webcam.config.displayName,
+                        "provider": webcam.providerIdentifier,
+                        "can_snapshot": webcam.config.canSnapshot,
+                        "snapshot_display": webcam.config.snapshotDisplay,
+                        "flip_h": webcam.config.flipH,
+                        "flip_v": webcam.config.flipV,
+                        "rotate_90": webcam.config.rotate90,
+                        "extras": webcam.config.extras
+                    })
+                else:
+                    camera_info["error"] = "No webcam configured"
+                    
+            except Exception as e:
+                camera_info["error"] = f"Failed to get webcam info: {e}"
+        else:
+            camera_info.update({
+                "name": "fake_camera",
+                "display_name": "Fake Camera (Testing Mode)",
+                "provider": "layercapture_plugin",
+                "can_snapshot": True,
+                "note": "This is a fake camera for testing purposes"
+            })
+        
+        return camera_info
     
     def _cleanup_capture_session(self):
         """Clean up after print session ends"""

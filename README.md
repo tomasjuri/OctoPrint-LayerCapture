@@ -52,6 +52,9 @@ After installation, go to **Settings > Plugins > Layer Capture** to configure:
 ### Camera Settings
 - **Fake Camera Mode**: Enable for testing without real camera hardware
 - **Capture Delay**: Time to wait after movement before capturing
+- **Pre-Capture Delay**: Additional delay before taking snapshot for stabilization
+- **Image Quality**: JPEG compression quality (1-100)
+- **Create Thumbnails**: Generate small preview images for web viewing
 - **Return to Origin**: Whether to return to original position after capture
 
 ### G-code and Movement Settings
@@ -110,16 +113,39 @@ Each capture session generates a JSON file containing:
 }
 ```
 
+## Camera System
+
+### Real Camera Support
+The plugin integrates with OctoPrint's webcam system to capture high-quality images from real cameras:
+- **USB Webcams**: Logitech C270, C920, C922, and other UVC cameras
+- **Raspberry Pi Camera**: Official Pi Camera Module v1/v2/HQ
+- **IP Cameras**: Any camera providing MJPEG streams
+- **Automatic Detection**: Uses configured snapshot webcam from OctoPrint
+
+### Fake Camera for Testing
+Advanced fake camera generates realistic test images with:
+- **Print bed simulation**: Grid pattern background
+- **Layer visualization**: Progressive stack effect showing layer height
+- **Metadata overlay**: Layer info, position, timestamps
+- **Crosshair indicator**: Shows capture position
+- **PIL/Pillow support**: Creates actual JPEG images when available
+
+### Camera Setup
+For detailed camera setup instructions, see: **[OCTOPRINT_CAMERA_SETUP.md](OCTOPRINT_CAMERA_SETUP.md)**
+
 ## File Structure
 
-Captured files are saved in the configured capture folder:
+Captured files are organized by date in the configured capture folder:
 ```
 uploads/layercapture/
-├── layer_0003_pos_00_20240115_103000.jpg
-├── layer_0003_pos_01_20240115_103001.jpg
-├── layer_0003_metadata_20240115_103000.json
-├── layer_0006_pos_00_20240115_103500.jpg
-└── ...
+├── 2024-01-15/
+│   ├── layer_0003_pos_00_z_0_60_20240115_103000.jpg
+│   ├── layer_0003_pos_01_z_0_60_20240115_103001.jpg
+│   ├── layer_0003_pos_00_z_0_60_20240115_103000_thumb.jpg
+│   ├── layer_0003_metadata_20240115_103000.json
+│   └── ...
+├── 2024-01-16/
+│   └── ...
 ```
 
 ## Development
