@@ -42,6 +42,7 @@ class LayerCapturePlugin(
             "grid_center_x": 125,  # Center position X in mm
             "grid_center_y": 105,  # Center position Y in mm  
             "grid_size": 3,  # 3x3 grid (center + 8 around)
+            "z_offset": 5,  # Z offset above print surface in mm
             "bed_max_x": 250,  # Printer bed width (X) in mm
             "bed_max_y": 210,  # Printer bed height (Y) in mm
             
@@ -202,7 +203,7 @@ class LayerCapturePlugin(
                 current_pos = self._get_current_position()
                 
                 # 3. Calculate grid positions
-                grid_positions = self._calculate_grid_positions()
+                grid_positions = self._calculate_grid_positions(capture_data["z_height"])
                 
                 # 4. Move to each position and capture
                 captured_images = []
@@ -254,12 +255,13 @@ class LayerCapturePlugin(
         # In real implementation, this would query the printer for current position
         return {"x": 100, "y": 100, "z": 10}
     
-    def _calculate_grid_positions(self):
+    def _calculate_grid_positions(self, z_height=None):
         """Calculate grid positions for image capture"""
         center_x = self._settings.get_float(["grid_center_x"])
         center_y = self._settings.get_float(["grid_center_y"])
         spacing = self._settings.get_float(["grid_spacing"])
         grid_size = self._settings.get_int(["grid_size"])
+        z_offset = self._settings.get_float(["z_offset"])
         
         positions = []
         
@@ -272,7 +274,11 @@ class LayerCapturePlugin(
                 
                 # Validate position is within bed boundaries
                 if self._is_position_safe(x, y):
-                    positions.append({"x": x, "y": y})
+                    position = {"x": x, "y": y}
+                    if z_height is not None:
+                        # Add Z offset to the current layer height
+                        position["z"] = z_height + z_offset
+                    positions.append(position)
         
         return positions
     
@@ -288,7 +294,12 @@ class LayerCapturePlugin(
     def _move_to_position(self, position):
         """Move printer head to specified position"""
         x, y = position["x"], position["y"]
-        gcode_command = f"G1 X{x} Y{y} F3000"  # Move at 3000 mm/min
+        z = position.get("z")  # Z coordinate is optional
+        
+        if z is not None:
+            gcode_command = f"G1 X{x} Y{y} Z{z} F3000"  # Move at 3000 mm/min
+        else:
+            gcode_command = f"G1 X{x} Y{y} F3000"  # Move at 3000 mm/min
         
         self._logger.debug(f"Sending movement command: {gcode_command}")
         self._printer.commands([gcode_command])

@@ -17,6 +17,7 @@ $(function() {
             var centerY = parseFloat(self.settings.settings.plugins.layercapture.grid_center_y());
             var spacing = parseFloat(self.settings.settings.plugins.layercapture.grid_spacing());
             var gridSize = parseInt(self.settings.settings.plugins.layercapture.grid_size());
+            var zOffset = parseFloat(self.settings.settings.plugins.layercapture.z_offset());
             var bedWidth = parseFloat(self.settings.settings.plugins.layercapture.bed_width());
             var bedHeight = parseFloat(self.settings.settings.plugins.layercapture.bed_height());
             var margin = parseFloat(self.settings.settings.plugins.layercapture.boundary_margin());
@@ -47,17 +48,21 @@ $(function() {
                 '</div>' +
                 '<div class="modal-body">' +
                 '<p>Grid positions for capture (center: ' + centerX + ', ' + centerY + '):</p>' +
+                '<p><strong>Z Offset:</strong> ' + zOffset + 'mm above print surface</p>' +
                 '<table class="table table-striped">' +
-                '<thead><tr><th>Position</th><th>X (mm)</th><th>Y (mm)</th><th>Status</th></tr></thead>' +
+                '<thead><tr><th>Position</th><th>X (mm)</th><th>Y (mm)</th><th>Z (mm)</th><th>Status</th></tr></thead>' +
                 '<tbody>';
             
             for (var i = 0; i < positions.length; i++) {
                 var pos = positions[i];
                 var status = pos.safe ? '<span class="text-success">Safe</span>' : '<span class="text-error">Out of bounds</span>';
+                // Z coordinate would be current layer height + offset, show as example
+                var exampleZ = (2.0 + zOffset).toFixed(1); // Example at 2mm layer height
                 previewHtml += '<tr>' +
                     '<td>' + (i + 1) + '</td>' +
                     '<td>' + pos.x.toFixed(1) + '</td>' +
                     '<td>' + pos.y.toFixed(1) + '</td>' +
+                    '<td>' + exampleZ + ' (layer + ' + zOffset + 'mm)</td>' +
                     '<td>' + status + '</td>' +
                     '</tr>';
             }
