@@ -9,6 +9,31 @@ $(function() {
         self.captureInProgress = ko.observable(false);
         self.currentLayer = ko.observable(0);
         self.targetLayers = ko.observableArray([]);
+        self.printStartTime = ko.observable(null);
+        self.currentGcodeFile = ko.observable("");
+        
+        // Update status periodically
+        self.updateStatus = function() {
+            $.ajax({
+                url: API_BASEURL + "plugin/layercapture",
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify({
+                    command: "status"
+                }),
+                contentType: "application/json; charset=UTF-8",
+                success: function(data) {
+                    self.currentLayer(data.current_layer || 0);
+                    self.targetLayers(data.target_layers || []);
+                    self.captureInProgress(data.capture_in_progress || false);
+                    self.printStartTime(data.print_start_time);
+                    self.currentGcodeFile(data.current_gcode_file || "");
+                },
+                error: function() {
+                    // Silently fail for status updates
+                }
+            });
+        };
         
         // Grid preview functionality
         self.showGridPreview = function() {
@@ -116,6 +141,17 @@ $(function() {
         // Settings validation
         self.onSettingsShown = function() {
             // Add validation for grid positions when settings are shown
+            // Start status updates when settings are shown
+            self.updateStatus();
+            self.statusInterval = setInterval(self.updateStatus, 2000); // Update every 2 seconds
+        };
+        
+        self.onSettingsHidden = function() {
+            // Stop status updates when settings are hidden
+            if (self.statusInterval) {
+                clearInterval(self.statusInterval);
+                self.statusInterval = null;
+            }
         };
         
         self.onSettingsBeforeSave = function() {

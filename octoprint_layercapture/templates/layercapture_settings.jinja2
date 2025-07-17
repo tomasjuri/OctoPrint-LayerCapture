@@ -116,6 +116,42 @@
     </div>
     
     <div class="control-group">
+        <h4>{{ _("G-code and Movement Settings") }}</h4>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Movement Speed (mm/min)") }}</label>
+        <div class="controls">
+            <input type="number" min="100" max="10000" step="100" class="input-block-level" data-bind="value: settings.plugins.layercapture.movement_speed">
+            <span class="help-block">{{ _("Speed for print head movements during capture (default: 3000)") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Pause/Resume Timeout (seconds)") }}</label>
+        <div class="controls">
+            <input type="number" min="5" max="30" step="1" class="input-block-level" data-bind="value: settings.plugins.layercapture.pause_timeout">
+            <span class="help-block">{{ _("Timeout for pause and resume operations (default: 10)") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Movement Timeout (seconds)") }}</label>
+        <div class="controls">
+            <input type="number" min="1" max="10" step="1" class="input-block-level" data-bind="value: settings.plugins.layercapture.movement_timeout">
+            <span class="help-block">{{ _("Wait time after movement commands (default: 5)") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Emergency Resume Attempts") }}</label>
+        <div class="controls">
+            <input type="number" min="1" max="5" step="1" class="input-block-level" data-bind="value: settings.plugins.layercapture.emergency_resume_attempts">
+            <span class="help-block">{{ _("Number of attempts to resume print in emergency (default: 3)") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
         <h4>{{ _("File Management") }}</h4>
     </div>
     
@@ -152,6 +188,24 @@
         <div class="controls">
             <input type="number" step="0.5" class="input-block-level" data-bind="value: settings.plugins.layercapture.boundary_margin">
             <span class="help-block">{{ _("Safety margin from bed edges") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <h4>{{ _("Status") }}</h4>
+    </div>
+    
+    <div class="control-group">
+        <div class="controls">
+            <div class="layercapture-status" data-bind="css: { 'active': captureInProgress, 'inactive': !captureInProgress() }">
+                <strong>{{ _("Capture Status:") }}</strong>
+                <span data-bind="text: captureInProgress() ? 'Active' : 'Inactive'"></span>
+            </div>
+            <div class="layercapture-info">
+                <strong>{{ _("Current Layer:") }}</strong> <span data-bind="text: currentLayer"></span><br>
+                <strong>{{ _("Target Layers:") }}</strong> <span data-bind="text: targetLayers().join(', ') || 'None'"></span><br>
+                <strong>{{ _("Current File:") }}</strong> <span data-bind="text: currentGcodeFile || 'None'"></span>
+            </div>
         </div>
     </div>
     

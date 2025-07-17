@@ -54,6 +54,12 @@ After installation, go to **Settings > Plugins > Layer Capture** to configure:
 - **Capture Delay**: Time to wait after movement before capturing
 - **Return to Origin**: Whether to return to original position after capture
 
+### G-code and Movement Settings
+- **Movement Speed**: Print head movement speed during captures (mm/min)
+- **Pause/Resume Timeout**: Timeout for pause and resume operations
+- **Movement Timeout**: Wait time after movement commands
+- **Emergency Resume Attempts**: Number of attempts to resume print in emergency
+
 ## How It Works
 
 ### Layer Detection
@@ -66,11 +72,11 @@ For each capture, the plugin calculates a grid of positions around the configure
 - **Z Coordinate**: Current layer height + Z offset for optimal capture angle
 
 ### Capture Sequence
-1. **Pause Print**: Temporarily halts the print job
-2. **Move to Position**: Moves print head to each grid position
+1. **Pause Print**: Safely pauses the print job with timeout validation
+2. **Move to Position**: Moves print head to each grid position with safety checks
 3. **Capture Image**: Takes photo at current X, Y, Z coordinates
 4. **Save Metadata**: Records position data and print information
-5. **Resume Print**: Continues the print job
+5. **Resume Print**: Safely resumes the print job with error recovery
 
 ### Metadata Output
 Each capture session generates a JSON file containing:
