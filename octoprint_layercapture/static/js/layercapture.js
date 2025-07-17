@@ -35,73 +35,110 @@ $(function() {
             });
         };
         
-        // Grid preview functionality
+        // 3D Grid preview functionality
         self.showGridPreview = function() {
-            // Calculate grid positions based on current settings
+            // Calculate 3D grid positions based on current settings
             var centerX = parseFloat(self.settings.settings.plugins.layercapture.grid_center_x());
             var centerY = parseFloat(self.settings.settings.plugins.layercapture.grid_center_y());
-            var spacing = parseFloat(self.settings.settings.plugins.layercapture.grid_spacing());
-            var gridSize = parseInt(self.settings.settings.plugins.layercapture.grid_size());
-            var zOffset = parseFloat(self.settings.settings.plugins.layercapture.z_offset());
-            var bedWidth = parseFloat(self.settings.settings.plugins.layercapture.bed_width());
-            var bedHeight = parseFloat(self.settings.settings.plugins.layercapture.bed_height());
+            var centerZ = parseFloat(self.settings.settings.plugins.layercapture.grid_center_z());
+            
+            // Use new settings with fallback to legacy
+            var gridSizeX = parseInt(self.settings.settings.plugins.layercapture.grid_size_x()) || parseInt(self.settings.settings.plugins.layercapture.grid_size());
+            var gridSizeY = parseInt(self.settings.settings.plugins.layercapture.grid_size_y()) || parseInt(self.settings.settings.plugins.layercapture.grid_size());
+            var gridSizeZ = parseInt(self.settings.settings.plugins.layercapture.grid_size_z()) || 1;
+            
+            var spacingX = parseFloat(self.settings.settings.plugins.layercapture.grid_spacing_x()) || parseFloat(self.settings.settings.plugins.layercapture.grid_spacing());
+            var spacingY = parseFloat(self.settings.settings.plugins.layercapture.grid_spacing_y()) || parseFloat(self.settings.settings.plugins.layercapture.grid_spacing());
+            var spacingZ = parseFloat(self.settings.settings.plugins.layercapture.grid_spacing_z()) || 5.0;
+            
+            var zOffsetBase = parseFloat(self.settings.settings.plugins.layercapture.z_offset_base()) || parseFloat(self.settings.settings.plugins.layercapture.z_offset());
+            var bedWidth = parseFloat(self.settings.settings.plugins.layercapture.bed_width()) || parseFloat(self.settings.settings.plugins.layercapture.bed_max_x());
+            var bedHeight = parseFloat(self.settings.settings.plugins.layercapture.bed_height()) || parseFloat(self.settings.settings.plugins.layercapture.bed_max_y());
             var margin = parseFloat(self.settings.settings.plugins.layercapture.boundary_margin());
+            var maxZ = parseFloat(self.settings.settings.plugins.layercapture.max_z_height());
             
             var positions = [];
-            var halfSize = Math.floor(gridSize / 2);
+            var halfSizeX = Math.floor(gridSizeX / 2);
+            var halfSizeY = Math.floor(gridSizeY / 2);
+            var halfSizeZ = Math.floor(gridSizeZ / 2);
             
-            for (var x = -halfSize; x <= halfSize; x++) {
-                for (var y = -halfSize; y <= halfSize; y++) {
-                    var posX = centerX + (x * spacing);
-                    var posY = centerY + (y * spacing);
-                    
-                    // Check if position is within safe boundaries
-                    var isSafe = (posX >= margin && posX <= bedWidth - margin && 
-                                 posY >= margin && posY <= bedHeight - margin);
-                    
-                    positions.push({
-                        x: posX,
-                        y: posY,
-                        safe: isSafe
-                    });
+            for (var x = -halfSizeX; x <= halfSizeX; x++) {
+                for (var y = -halfSizeY; y <= halfSizeY; y++) {
+                    for (var z = -halfSizeZ; z <= halfSizeZ; z++) {
+                        var posX = centerX + (x * spacingX);
+                        var posY = centerY + (y * spacingY);
+                        // Example layer height of 2.0mm
+                        var posZ = 2.0 + zOffsetBase + centerZ + (z * spacingZ);
+                        
+                        // Check if position is within safe boundaries
+                        var xSafe = posX >= margin && posX <= bedWidth - margin;
+                        var ySafe = posY >= margin && posY <= bedHeight - margin;
+                        var zSafe = posZ >= 0 && posZ <= maxZ;
+                        var isSafe = xSafe && ySafe && zSafe;
+                        
+                        positions.push({
+                            x: posX,
+                            y: posY,
+                            z: posZ,
+                            gridCoords: {x: x, y: y, z: z},
+                            safe: isSafe
+                        });
+                    }
                 }
             }
             
-            // Create preview dialog
+            // Create 3D preview dialog
             var previewHtml = '<div class="modal-header">' +
-                '<h3>Grid Preview</h3>' +
+                '<h3>3D Grid Preview</h3>' +
                 '</div>' +
-                '<div class="modal-body">' +
-                '<p>Grid positions for capture (center: ' + centerX + ', ' + centerY + '):</p>' +
-                '<p><strong>Z Offset:</strong> ' + zOffset + 'mm above print surface</p>' +
-                '<table class="table table-striped">' +
-                '<thead><tr><th>Position</th><th>X (mm)</th><th>Y (mm)</th><th>Z (mm)</th><th>Status</th></tr></thead>' +
+                '<div class="modal-body layercapture-grid-preview">' +
+                '<p><strong>3D Grid Configuration:</strong></p>' +
+                '<ul>' +
+                '<li>Grid Center: (' + centerX + ', ' + centerY + ', ' + centerZ + ')</li>' +
+                '<li>Grid Dimensions: ' + gridSizeX + ' × ' + gridSizeY + ' × ' + gridSizeZ + '</li>' +
+                '<li>Grid Spacing: ' + spacingX + 'mm × ' + spacingY + 'mm × ' + spacingZ + 'mm</li>' +
+                '<li>Base Z Offset: ' + zOffsetBase + 'mm</li>' +
+                '</ul>' +
+                '<p><em>Example positions at layer height 2.0mm:</em></p>' +
+                '<table class="table table-striped table-condensed layercapture-preview-table">' +
+                '<thead><tr><th>#</th><th>Grid (X,Y,Z)</th><th>Position X</th><th>Position Y</th><th>Position Z</th><th>Status</th></tr></thead>' +
                 '<tbody>';
             
             for (var i = 0; i < positions.length; i++) {
                 var pos = positions[i];
-                var status = pos.safe ? '<span class="text-success">Safe</span>' : '<span class="text-error">Out of bounds</span>';
-                // Z coordinate would be current layer height + offset, show as example
-                var exampleZ = (2.0 + zOffset).toFixed(1); // Example at 2mm layer height
+                var status = pos.safe ? '<span class="layercapture-position-safe">✓ Safe</span>' : '<span class="layercapture-position-unsafe">✗ Out of bounds</span>';
+                var gridCoordStr = '(' + pos.gridCoords.x + ',' + pos.gridCoords.y + ',' + pos.gridCoords.z + ')';
+                
                 previewHtml += '<tr>' +
                     '<td>' + (i + 1) + '</td>' +
+                    '<td>' + gridCoordStr + '</td>' +
                     '<td>' + pos.x.toFixed(1) + '</td>' +
                     '<td>' + pos.y.toFixed(1) + '</td>' +
-                    '<td>' + exampleZ + ' (layer + ' + zOffset + 'mm)</td>' +
+                    '<td>' + pos.z.toFixed(1) + '</td>' +
                     '<td>' + status + '</td>' +
                     '</tr>';
             }
             
+            var safePositions = positions.filter(function(p) { return p.safe; }).length;
+            var totalImages = safePositions;
+            
             previewHtml += '</tbody></table>' +
-                '<p><strong>Total positions:</strong> ' + positions.length + '</p>' +
-                '<p><strong>Safe positions:</strong> ' + positions.filter(function(p) { return p.safe; }).length + '</p>' +
+                '<div class="layercapture-summary">' +
+                '<p><strong>Summary:</strong></p>' +
+                '<ul>' +
+                '<li>Total positions: ' + positions.length + '</li>' +
+                '<li>Safe positions: ' + safePositions + '</li>' +
+                '<li>Images per layer: ' + totalImages + '</li>' +
+                '<li>Estimated capture time: ~' + Math.ceil(totalImages * 3) + ' seconds per layer</li>' +
+                '</ul>' +
+                '</div>' +
                 '</div>' +
                 '<div class="modal-footer">' +
                 '<button class="btn" data-dismiss="modal">Close</button>' +
                 '</div>';
             
-            // Show modal
-            var dialog = $('<div class="modal hide fade" style="width: 500px; margin-left: -250px;">' + previewHtml + '</div>');
+            // Show modal with larger size for 3D data
+            var dialog = $('<div class="modal hide fade" style="width: 700px; margin-left: -350px;">' + previewHtml + '</div>');
             dialog.modal('show');
             dialog.on('hidden', function() {
                 dialog.remove();

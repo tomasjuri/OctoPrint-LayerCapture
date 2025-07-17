@@ -1,6 +1,12 @@
 <form class="form-horizontal">
     <div class="control-group">
-        <h4>{{ _("Grid Configuration") }}</h4>
+        <h4>{{ _("3D Grid Configuration") }}</h4>
+        <span class="help-block">{{ _("Configure a true 3D grid with separate settings for each axis (X, Y, Z)") }}</span>
+    </div>
+    
+    <!-- Grid Center Positions -->
+    <div class="control-group">
+        <h5>{{ _("Grid Center Position") }}</h5>
     </div>
     
     <div class="control-group">
@@ -20,30 +26,91 @@
     </div>
     
     <div class="control-group">
-        <label class="control-label">{{ _("Grid Spacing (mm)") }}</label>
+        <label class="control-label">{{ _("Grid Center Z (mm)") }}</label>
         <div class="controls">
-            <input type="number" step="1" class="input-block-level" data-bind="value: settings.plugins.layercapture.grid_spacing">
-            <span class="help-block">{{ _("Distance between grid points in millimeters (default: 40mm = 4cm)") }}</span>
+            <input type="number" step="0.1" class="input-block-level" data-bind="value: settings.plugins.layercapture.grid_center_z">
+            <span class="help-block">{{ _("Z offset relative to current layer for grid center (0 = at layer height + base offset)") }}</span>
         </div>
     </div>
     
+    <!-- Grid Sizes -->
     <div class="control-group">
-        <label class="control-label">{{ _("Grid Size") }}</label>
+        <h5>{{ _("Grid Dimensions") }}</h5>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Grid Size X") }}</label>
         <div class="controls">
-            <select class="input-block-level" data-bind="value: settings.plugins.layercapture.grid_size">
-                <option value="1">1x1 (1 position - center only)</option>
-                <option value="3">3x3 (9 positions)</option>
-                <option value="5">5x5 (25 positions)</option>
+            <select class="input-block-level" data-bind="value: settings.plugins.layercapture.grid_size_x">
+                <option value="1">1 position</option>
+                <option value="3">3 positions</option>
+                <option value="5">5 positions</option>
+                <option value="7">7 positions</option>
             </select>
-            <span class="help-block">{{ _("Number of grid points in each direction") }}</span>
+            <span class="help-block">{{ _("Number of capture positions along X-axis") }}</span>
         </div>
     </div>
     
     <div class="control-group">
-        <label class="control-label">{{ _("Z Offset (mm)") }}</label>
+        <label class="control-label">{{ _("Grid Size Y") }}</label>
         <div class="controls">
-            <input type="number" step="0.1" class="input-block-level" data-bind="value: settings.plugins.layercapture.z_offset">
-            <span class="help-block">{{ _("Distance above the print surface for capture positions (default: 5mm)") }}</span>
+            <select class="input-block-level" data-bind="value: settings.plugins.layercapture.grid_size_y">
+                <option value="1">1 position</option>
+                <option value="3">3 positions</option>
+                <option value="5">5 positions</option>
+                <option value="7">7 positions</option>
+            </select>
+            <span class="help-block">{{ _("Number of capture positions along Y-axis") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Grid Size Z") }}</label>
+        <div class="controls">
+            <select class="input-block-level" data-bind="value: settings.plugins.layercapture.grid_size_z">
+                <option value="1">1 position (single height)</option>
+                <option value="2">2 positions</option>
+                <option value="3">3 positions</option>
+                <option value="5">5 positions</option>
+            </select>
+            <span class="help-block">{{ _("Number of capture positions along Z-axis (different heights above print)") }}</span>
+        </div>
+    </div>
+    
+    <!-- Grid Spacing -->
+    <div class="control-group">
+        <h5>{{ _("Grid Spacing") }}</h5>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("X Spacing (mm)") }}</label>
+        <div class="controls">
+            <input type="number" step="1" class="input-block-level" data-bind="value: settings.plugins.layercapture.grid_spacing_x">
+            <span class="help-block">{{ _("Distance between grid points in X direction (default: 20mm)") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Y Spacing (mm)") }}</label>
+        <div class="controls">
+            <input type="number" step="1" class="input-block-level" data-bind="value: settings.plugins.layercapture.grid_spacing_y">
+            <span class="help-block">{{ _("Distance between grid points in Y direction (default: 20mm)") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Z Spacing (mm)") }}</label>
+        <div class="controls">
+            <input type="number" step="0.5" class="input-block-level" data-bind="value: settings.plugins.layercapture.grid_spacing_z">
+            <span class="help-block">{{ _("Distance between grid points in Z direction (default: 5mm)") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Base Z Offset (mm)") }}</label>
+        <div class="controls">
+            <input type="number" step="0.1" class="input-block-level" data-bind="value: settings.plugins.layercapture.z_offset_base">
+            <span class="help-block">{{ _("Base distance above the print surface for all capture positions (default: 5mm)") }}</span>
         </div>
     </div>
     
@@ -192,6 +259,14 @@
         <div class="controls">
             <input type="checkbox" data-bind="checked: settings.plugins.layercapture.save_metadata">
             <span class="help-block">{{ _("Save JSON metadata files with capture information") }}</span>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label class="control-label">{{ _("Calibration File Path (JSON)") }}</label>
+        <div class="controls">
+            <input type="text" class="input-block-level" data-bind="value: settings.plugins.layercapture.calibration_file_path">
+            <span class="help-block">{{ _("Path to the calibration JSON file for this print. This will be included in the metadata.") }}</span>
         </div>
     </div>
     

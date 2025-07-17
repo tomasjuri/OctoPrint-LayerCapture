@@ -31,20 +31,36 @@ class LayerCapturePlugin(
         self._target_layers = set()
         self._print_start_time = None
         self._current_gcode_file = None
+        self._current_calibration_file = "calibTODO.json" # Initialize calibration file path
         self._capture_mutex = threading.Lock()
         
     ##~~ SettingsPlugin mixin
     
     def get_settings_defaults(self):
         return {
-            # Grid configuration
-            "grid_spacing": 20,  # 2cm spacing in mm
+            # 3D Grid configuration - separate settings for each axis
             "grid_center_x": 125,  # Center position X in mm
             "grid_center_y": 105,  # Center position Y in mm  
-            "grid_size": 3,  # 3x3 grid (center + 8 around)
-            "z_offset": 5,  # Z offset above print surface in mm
-            "bed_max_x": 250,  # Printer bed width (X) in mm
-            "bed_max_y": 210,  # Printer bed height (Y) in mm
+            "grid_center_z": 0,    # Center Z offset relative to current layer in mm
+            "grid_size_x": 3,      # Number of positions in X direction
+            "grid_size_y": 3,      # Number of positions in Y direction
+            "grid_size_z": 3,      # Number of positions in Z direction
+
+            "grid_spacing_x": 20,  # Spacing between X positions in mm
+            "grid_spacing_y": 20,  # Spacing between Y positions in mm
+            "grid_spacing_z": 5,   # Spacing between Z positions in mm
+            "z_offset_base": 5,    # Base Z offset above print surface in mm
+            
+            # Legacy settings for backward compatibility
+            "grid_spacing": 20,    # Deprecated: use grid_spacing_x/y instead
+            "grid_size": 3,        # Deprecated: use grid_size_x/y instead
+            "z_offset": 5,         # Deprecated: use z_offset_base instead
+            
+            # Printer bed dimensions
+            "bed_max_x": 250,      # Printer bed width (X) in mm
+            "bed_max_y": 210,      # Printer bed height (Y) in mm
+            "bed_width": 250,      # Alias for bed_max_x (backward compatibility)
+            "bed_height": 210,     # Alias for bed_max_y (backward compatibility)
             
             # Layer capture configuration
             "capture_every_n_layers": 3,  # Capture every 3rd layer
@@ -68,6 +84,9 @@ class LayerCapturePlugin(
             # File management
             "capture_folder": "layercapture",  # Folder within uploads for captures
             "save_metadata": True,  # Save JSON metadata files
+            
+            # Calibration file path (JSON string)
+            "calibration_file_path": "",  # Path to calibration JSON file for this print
             
             # Safety settings
             "max_z_height": 300,  # Maximum Z height limit in mm
@@ -134,6 +153,7 @@ class LayerCapturePlugin(
         self._print_start_time = time.time()
         self._current_layer = 0
         self._current_gcode_file = payload.get("file", {}).get("path")
+        self._current_calibration_file = self._settings.get(["calibration_file_path"])  # Store calibration file path
         self._capture_queue.clear()
         
         # Calculate target layers based on settings
@@ -148,7 +168,8 @@ class LayerCapturePlugin(
         self._plugin_manager.send_plugin_message("layercapture", {
             "type": "print_started",
             "target_layers": sorted(self._target_layers),
-            "file_name": file_info.get("name", "Unknown")
+            "file_name": file_info.get("name", "Unknown"),
+            "calibration_file_path": self._current_calibration_file
         })
     
     def _on_print_done(self, payload):
@@ -243,6 +264,7 @@ class LayerCapturePlugin(
             "z_height": z_height,
             "timestamp": time.time(),
             "gcode_file": self._current_gcode_file,
+            "calibration_file_path": self._current_calibration_file  # Add calibration file path to capture data
         }
         
         self._capture_queue.append(capture_data)
@@ -395,40 +417,79 @@ class LayerCapturePlugin(
         return {"x": 100, "y": 100, "z": 10}
     
     def _calculate_grid_positions(self, z_height=None):
-        """Calculate grid positions for image capture"""
+        """Calculate 3D grid positions for image capture"""
+        # Get 3D grid configuration with fallback to legacy settings
         center_x = self._settings.get_float(["grid_center_x"])
         center_y = self._settings.get_float(["grid_center_y"])
-        spacing = self._settings.get_float(["grid_spacing"])
-        grid_size = self._settings.get_int(["grid_size"])
-        z_offset = self._settings.get_float(["z_offset"])
+        center_z = self._settings.get_float(["grid_center_z"])
+        
+        # Use new axis-specific settings with fallback to legacy
+        grid_size_x = self._settings.get_int(["grid_size_x"]) or self._settings.get_int(["grid_size"])
+        grid_size_y = self._settings.get_int(["grid_size_y"]) or self._settings.get_int(["grid_size"])
+        grid_size_z = self._settings.get_int(["grid_size_z"]) or 1
+        
+        spacing_x = self._settings.get_float(["grid_spacing_x"]) or self._settings.get_float(["grid_spacing"])
+        spacing_y = self._settings.get_float(["grid_spacing_y"]) or self._settings.get_float(["grid_spacing"])
+        spacing_z = self._settings.get_float(["grid_spacing_z"]) or 5.0
+        
+        z_offset_base = self._settings.get_float(["z_offset_base"]) or self._settings.get_float(["z_offset"])
         
         positions = []
         
-        # Calculate grid positions around center
-        half_size = grid_size // 2
-        for x_offset in range(-half_size, half_size + 1):
-            for y_offset in range(-half_size, half_size + 1):
-                x = center_x + (x_offset * spacing)
-                y = center_y + (y_offset * spacing)
-                
-                # Validate position is within bed boundaries
-                if self._is_position_safe(x, y):
-                    position = {"x": x, "y": y}
-                    if z_height is not None:
-                        # Add Z offset to the current layer height
-                        position["z"] = z_height + z_offset
-                    positions.append(position)
+        # Calculate 3D grid positions around center
+        half_size_x = grid_size_x // 2
+        half_size_y = grid_size_y // 2
+        half_size_z = grid_size_z // 2
         
+        for x_offset in range(-half_size_x, half_size_x + 1):
+            for y_offset in range(-half_size_y, half_size_y + 1):
+                for z_offset in range(-half_size_z, half_size_z + 1):
+                    x = center_x + (x_offset * spacing_x)
+                    y = center_y + (y_offset * spacing_y)
+                    
+                    # Calculate Z position
+                    if z_height is not None:
+                        # Z position = current layer height + base offset + grid Z offset
+                        z = z_height + z_offset_base + center_z + (z_offset * spacing_z)
+                    else:
+                        # If no layer height provided, use base offset only
+                        z = z_offset_base + center_z + (z_offset * spacing_z)
+                    
+                    # Validate position is within bed boundaries
+                    if self._is_position_safe(x, y, z):
+                        position = {
+                            "x": x, 
+                            "y": y, 
+                            "z": z,
+                            "grid_coords": {
+                                "x_offset": x_offset,
+                                "y_offset": y_offset,
+                                "z_offset": z_offset
+                            }
+                        }
+                        positions.append(position)
+        
+        self._logger.debug(f"Calculated {len(positions)} 3D grid positions ({grid_size_x}x{grid_size_y}x{grid_size_z})")
         return positions
     
-    def _is_position_safe(self, x, y):
+    def _is_position_safe(self, x, y, z=None):
         """Check if position is within safe boundaries"""
-        bed_width = self._settings.get_float(["bed_width"])
-        bed_height = self._settings.get_float(["bed_height"])
+        # Get bed dimensions with fallback to legacy settings
+        bed_width = self._settings.get_float(["bed_width"]) or self._settings.get_float(["bed_max_x"])
+        bed_height = self._settings.get_float(["bed_height"]) or self._settings.get_float(["bed_max_y"])
         margin = self._settings.get_float(["boundary_margin"])
+        max_z = self._settings.get_float(["max_z_height"])
         
-        return (margin <= x <= bed_width - margin and 
-                margin <= y <= bed_height - margin)
+        # Check X and Y boundaries
+        x_safe = margin <= x <= bed_width - margin
+        y_safe = margin <= y <= bed_height - margin
+        
+        # Check Z boundary if provided
+        z_safe = True
+        if z is not None:
+            z_safe = 0 <= z <= max_z
+        
+        return x_safe and y_safe and z_safe
     
     def _move_to_position(self, position):
         """Move printer head to specified position"""
@@ -805,6 +866,7 @@ Note: Install PIL/Pillow for realistic fake images: pip install Pillow"""
             "timestamp": capture_data["timestamp"],
             "timestamp_iso": datetime.fromtimestamp(capture_data["timestamp"]).isoformat(),
             "gcode_file": capture_data["gcode_file"],
+            "calibration_file_path": capture_data.get("calibration_file_path"),  # Include calibration file path
             "print_start_time": self._print_start_time,
             "print_start_time_iso": datetime.fromtimestamp(self._print_start_time).isoformat() if self._print_start_time else None,
             "images": captured_images,
@@ -820,7 +882,8 @@ Note: Install PIL/Pillow for realistic fake images: pip install Pillow"""
                 "image_quality": self._settings.get_int(["image_quality"]),
                 "movement_speed": self._settings.get_int(["movement_speed"]),
                 "capture_delay": self._settings.get_int(["capture_delay"]),
-                "pre_capture_delay": self._settings.get_float(["pre_capture_delay"])
+                "pre_capture_delay": self._settings.get_float(["pre_capture_delay"]),
+                "calibration_file_path": self._settings.get(["calibration_file_path"])  # Also include in settings
             },
             "plugin_version": __plugin_version__
         }
@@ -891,6 +954,7 @@ Note: Install PIL/Pillow for realistic fake images: pip install Pillow"""
         self._current_layer = 0
         self._print_start_time = None
         self._current_gcode_file = None
+        self._current_calibration_file = "" # Clear calibration file path on session end
         self._capture_in_progress = False
 
 

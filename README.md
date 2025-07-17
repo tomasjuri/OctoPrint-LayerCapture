@@ -91,6 +91,7 @@ Each capture session generates a JSON file containing:
   "timestamp": "2024-01-15T10:30:00",
   "gcode_file": "print.gcode",
   "print_start_time": "2024-01-15T10:00:00",
+  "calibration_file_path": "calib.json",
   "images": [
     {
       "path": "layer_0015_pos_00_20240115_103000.jpg",

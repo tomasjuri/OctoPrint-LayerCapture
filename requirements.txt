@@ -1,12 +1,43 @@
 ###
-# This file is only here to make sure that something like
-#
-#    pip install -e .[develop]
-#
-# works as expected. Requirements can be found in setup.py in the
-# variables INSTALL_REQUIRES and EXTRA_REQUIRES.
+# LayerCapture Plugin Requirements
+# This file includes dependencies needed for development and testing plugin components
 ###
 
-# let's force the regular pypi URL, with https, just to be sure
+# Force regular PyPI URL with HTTPS
 -i https://pypi.python.org/simple
-.
+
+# Image processing (for camera functionality)
+Pillow>=8.0.0
+
+# Testing framework and utilities
+pytest>=6.0.0
+pytest-cov>=2.10.0
+unittest-xml-reporting>=3.0.0
+
+# HTTP and web framework dependencies
+requests>=2.25.0
+Flask>=2.0.0
+Werkzeug>=2.0.0
+
+# Data handling and utilities
+PyYAML>=5.4.0
+jsonschema>=3.2.0
+
+# Development and linting tools
+black>=21.0.0
+flake8>=3.8.0
+isort>=5.0.0
+
+# Virtual printer simulation dependencies  
+pyserial>=3.5
+
+# Additional utilities for testing
+mock>=4.0.0
+freezegun>=1.0.0
+
+# Plugin development utilities
+wheel>=0.36.0
+setuptools>=50.0.0
+
+# Date/time utilities
+python-dateutil>=2.8.0
